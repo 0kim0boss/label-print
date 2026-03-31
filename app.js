@@ -9,6 +9,7 @@
     // ==========================================
     var BARCODE_TYPE_CONFIG = {
         code128: { bcid: 'code128', hint: '숫자, 영문, 특수문자 모두 가능', validate: function(v) { return v.length > 0; } },
+        qrcode:  { bcid: 'qrcode',  hint: 'URL, 텍스트 등 모든 데이터 가능', validate: function(v) { return v.length > 0; } },
         ean13:   { bcid: 'ean13',   hint: '13자리 숫자 (체크디짓 자동)', validate: function(v) { return /^\d{12,13}$/.test(v); } },
         ean8:    { bcid: 'ean8',    hint: '8자리 숫자 (체크디짓 자동)', validate: function(v) { return /^\d{7,8}$/.test(v); } },
         upca:    { bcid: 'upca',    hint: '12자리 숫자 (체크디짓 자동)', validate: function(v) { return /^\d{11,12}$/.test(v); } },
@@ -255,15 +256,22 @@
     // ==========================================
     function renderBarcode(canvas, barcodeData, paperW, paperH) {
         var config = BARCODE_TYPE_CONFIG[els.barcodeType.value];
+        var isQR = config.bcid === 'qrcode';
         try {
-            bwipjs.toCanvas(canvas, {
+            var opts = {
                 bcid: config.bcid,
                 text: barcodeData,
                 includetext: false,
-                scale: 3,
-                width: paperW * 0.95,
-                height: paperH * 0.40,
-            });
+            };
+            if (isQR) {
+                opts.scale = 3;
+                opts.eclevel = 'M';
+            } else {
+                opts.scale = 3;
+                opts.width = paperW * 0.95;
+                opts.height = paperH * 0.40;
+            }
+            bwipjs.toCanvas(canvas, opts);
             return true;
         } catch (e) {
             console.error('Barcode error:', e);
@@ -273,15 +281,22 @@
 
     function renderBarcodeHighRes(barcodeData, paperW, paperH) {
         var config = BARCODE_TYPE_CONFIG[els.barcodeType.value];
+        var isQR = config.bcid === 'qrcode';
         var canvas = document.createElement('canvas');
-        bwipjs.toCanvas(canvas, {
+        var opts = {
             bcid: config.bcid,
             text: barcodeData,
             includetext: false,
-            scale: 4,
-            width: paperW * 0.95,
-            height: paperH * 0.40,
-        });
+        };
+        if (isQR) {
+            opts.scale = 6;
+            opts.eclevel = 'M';
+        } else {
+            opts.scale = 4;
+            opts.width = paperW * 0.95;
+            opts.height = paperH * 0.40;
+        }
+        bwipjs.toCanvas(canvas, opts);
         return canvas;
     }
 
