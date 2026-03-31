@@ -341,11 +341,20 @@
             card.style.width = displayWidth + 'px';
             card.style.height = displayHeight + 'px';
             card.style.padding = '3px 4px';
+            card.style.display = 'flex';
+            card.style.flexDirection = 'column';
+            card.style.justifyContent = 'center';
+            card.style.alignItems = 'center';
 
             if (outputMode === 'barcode') {
-                // Barcode mode: barcode + barcode number + description
+                // Wrapper to group barcode + number + desc tightly
+                var contentWrap = document.createElement('div');
+                contentWrap.style.cssText = 'display:flex;flex-direction:column;align-items:center;width:100%;';
+
+                // Barcode
                 var barcodeArea = document.createElement('div');
                 barcodeArea.className = 'label-barcode-area';
+                barcodeArea.style.flex = 'none';
                 var barcodeCanvas = document.createElement('canvas');
                 var ok = renderBarcode(barcodeCanvas, label.data, paperW, paperH);
                 if (!ok) {
@@ -356,20 +365,22 @@
                 } else {
                     barcodeArea.appendChild(barcodeCanvas);
                 }
-                card.appendChild(barcodeArea);
+                contentWrap.appendChild(barcodeArea);
 
-                // Barcode number (always shown)
+                // Barcode number (right below barcode)
                 var numDiv = document.createElement('div');
                 numDiv.className = 'label-barcode-number';
                 numDiv.textContent = label.data;
-                card.appendChild(numDiv);
+                contentWrap.appendChild(numDiv);
 
                 if (label.desc) {
                     var descDiv = document.createElement('div');
                     descDiv.className = 'label-description';
                     descDiv.textContent = label.desc;
-                    card.appendChild(descDiv);
+                    contentWrap.appendChild(descDiv);
                 }
+
+                card.appendChild(contentWrap);
             } else {
                 // Text mode: centered text
                 var textArea = document.createElement('div');
@@ -404,9 +415,9 @@
     }
 
     // ==========================================
-    // PDF Generation
+    // Print Generation
     // ==========================================
-    function generatePDF() {
+    function generatePrint() {
         var labels = getLabels();
         if (!labels) return;
 
@@ -414,16 +425,16 @@
 
         setTimeout(function() {
             try {
-                buildPDF(labels);
+                buildAndPrint(labels);
             } catch (e) {
-                console.error('PDF error:', e);
-                showToast('PDF 생성 실패: ' + e.message, 'error');
+                console.error('Print error:', e);
+                showToast('인쇄 준비 실패: ' + e.message, 'error');
                 els.btnPrint.classList.remove('loading');
             }
         }, 100);
     }
 
-    function buildPDF(labels) {
+    function buildAndPrint(labels) {
         if (!window.jspdf || !window.jspdf.jsPDF) {
             showToast('PDF 라이브러리 로드 실패. 페이지를 새로고침(Ctrl+Shift+R)하세요.', 'error');
             return;
@@ -451,13 +462,12 @@
                 var barcodeAspect = barcodeCanvas.width / barcodeCanvas.height;
 
                 // Reserve space for barcode number + optional description
-                var numFontSize = Math.min(paperH * 0.13, 8);
-                var descFontSize = Math.min(paperH * 0.11, 7);
-                var textGap = paperH * 0.05;
-                var bottomReserve = textGap + numFontSize * 0.5 + (label.desc ? descFontSize * 0.6 : 0) + paperH * 0.04;
+                var numFontSize = Math.min(paperH * 0.30, 45);
+                var descFontSize = Math.min(paperH * 0.20, 30);
+                var bottomReserve = numFontSize * 0.5 + (label.desc ? descFontSize * 0.6 : 0) + paperH * 0.03;
 
                 var maxW = paperW - 2 * padX;
-                var maxH = paperH - 2 * padY - bottomReserve;
+                var maxH = paperH * 0.65;
                 var drawW, drawH;
                 if (maxW / maxH > barcodeAspect) {
                     drawH = maxH;
@@ -467,16 +477,22 @@
                     drawH = drawW / barcodeAspect;
                 }
 
+                // Calculate total content height and center vertically
+                var numHeight = numFontSize * 0.32;
+                var descHeight = label.desc ? descFontSize * 0.38 : 0;
+                var totalHeight = drawH + numHeight + descHeight;
+                var startY = (paperH - totalHeight) / 2;
+
                 var barcodeX = (paperW - drawW) / 2;
-                var barcodeY = padY;
+                var barcodeY = startY;
 
                 pdf.addImage(barcodeDataUrl, 'PNG', barcodeX, barcodeY, drawW, drawH);
 
-                // Barcode number (always shown below barcode)
-                var numY = barcodeY + drawH + textGap + numFontSize * 0.35;
-                pdf.setFont('helvetica', 'normal');
+                // Barcode number (right below barcode)
+                var numY = barcodeY + drawH + numFontSize * 0.32;
+                pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(numFontSize);
-                pdf.setTextColor(68, 68, 68);
+                pdf.setTextColor(34, 34, 34);
                 var numWidth = pdf.getTextWidth(label.data);
                 pdf.text(label.data, (paperW - numWidth) / 2, numY);
 
@@ -486,7 +502,7 @@
                     pdf.setFontSize(descFontSize);
                     pdf.setTextColor(51, 51, 51);
                     var descWidth = pdf.getTextWidth(label.desc);
-                    var descY = numY + descFontSize * 0.55;
+                    var descY = numY + descFontSize * 0.38;
                     pdf.text(label.desc, (paperW - descWidth) / 2, descY);
                 }
 
@@ -507,62 +523,13 @@
             }
         });
 
-        var timestamp = new Date().toISOString().slice(0, 10);
-        var firstData = labels[0].data;
-        var filename = (outputMode === 'barcode' ? 'barcode_' : 'label_') + firstData + '_' + paperW + 'x' + paperH + 'mm_' + labels.length + 'pcs_' + timestamp + '.pdf';
-
+        // Open PDF in new tab
         var pdfBlob = pdf.output('blob');
+        var pdfUrl = URL.createObjectURL(pdfBlob);
+        window.open(pdfUrl, '_blank');
 
-        // Use File System Access API for reliable filename (Edge/Chrome)
-        savePdfFile(pdfBlob, filename, labels.length);
-    }
-
-    function savePdfFile(blob, filename, labelCount) {
-        // Method 1: File System Access API — native save dialog with correct filename
-        if (window.showSaveFilePicker) {
-            window.showSaveFilePicker({
-                suggestedName: filename,
-                types: [{
-                    description: 'PDF 문서',
-                    accept: { 'application/pdf': ['.pdf'] }
-                }]
-            }).then(function(handle) {
-                return handle.createWritable().then(function(writable) {
-                    return writable.write(blob).then(function() {
-                        return writable.close();
-                    });
-                });
-            }).then(function() {
-                showToast('PDF 저장 완료! (' + labelCount + '장)', 'success');
-            }).catch(function(e) {
-                if (e.name === 'AbortError') {
-                    showToast('저장이 취소되었습니다', 'info');
-                } else {
-                    console.warn('showSaveFilePicker failed, using fallback:', e);
-                    fallbackDownload(blob, filename, labelCount);
-                }
-            }).finally(function() {
-                els.btnPrint.classList.remove('loading');
-            });
-            return;
-        }
-
-        // Method 2: Fallback for browsers without File System Access API
-        fallbackDownload(blob, filename, labelCount);
         els.btnPrint.classList.remove('loading');
-    }
-
-    function fallbackDownload(blob, filename, labelCount) {
-        var url = URL.createObjectURL(blob);
-        var a = document.createElement('a');
-        a.href = url;
-        a.download = filename;
-        a.style.display = 'none';
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        setTimeout(function() { URL.revokeObjectURL(url); }, 10000);
-        showToast('PDF 저장 완료! (' + labelCount + '장)', 'success');
+        showToast('PDF가 새 탭에서 열렸습니다 (' + labels.length + '장)', 'success');
     }
 
     // ==========================================
@@ -621,7 +588,7 @@
 
         // Preview / Print
         els.btnPreview.addEventListener('click', renderPreview);
-        els.btnPrint.addEventListener('click', generatePDF);
+        els.btnPrint.addEventListener('click', generatePrint);
 
         // Enter → Preview (single mode)
         els.inputData.addEventListener('keydown', function(e) {

@@ -125,8 +125,8 @@ select option{background:#111827;color:var(--text-primary);}
 .label-card:hover{transform:scale(1.02);}
 .label-barcode-area{display:flex;justify-content:center;align-items:center;flex:1;min-height:20px;width:100%;}
 .label-barcode-area canvas{max-width:100%;height:auto;display:block;}
-.label-barcode-number{text-align:center;font-size:10px;font-weight:500;color:#444;font-family:'Consolas','Monaco',monospace;letter-spacing:1px;margin-top:-1px;line-height:1;}
-.label-description{text-align:center;font-size:9px;font-weight:600;color:#333;font-family:'Inter',sans-serif;margin-top:1px;line-height:1;}
+.label-barcode-number{text-align:center;font-size:18px;font-weight:700;color:#222;font-family:'Consolas','Monaco',monospace;letter-spacing:1px;margin-top:0;line-height:1;}
+.label-description{text-align:center;font-size:12px;font-weight:600;color:#333;font-family:'Inter',sans-serif;margin-top:0;line-height:1;}
 /* Text mode label */
 .label-text-content{display:flex;align-items:center;justify-content:center;flex:1;width:100%;min-height:30px;}
 .label-text-content span{font-size:16px;font-weight:700;color:#111;text-align:center;font-family:'Inter',sans-serif;word-break:break-word;}
