@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="롤 라벨 바코드 스티커 출력 프로그램">
+    <title>BarcodePrint - 롤 라벨 출력</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css?v=7">
+</head>
+<body>
+    <div class="bg-gradient"></div>
+    <div class="bg-grid"></div>
+
+    <!-- Header -->
+    <header class="header">
+        <div class="header-inner">
+            <div class="logo">
+                <div class="logo-icon">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="4" width="2" height="16" rx="0.5"/>
+                        <rect x="6" y="4" width="1" height="16" rx="0.5"/>
+                        <rect x="9" y="4" width="3" height="16" rx="0.5"/>
+                        <rect x="14" y="4" width="1" height="16" rx="0.5"/>
+                        <rect x="17" y="4" width="2" height="16" rx="0.5"/>
+                        <rect x="21" y="4" width="1" height="16" rx="0.5"/>
+                    </svg>
+                </div>
+                <h1>BarcodePrint</h1>
+            </div>
+            <p class="header-subtitle">롤 라벨 출력 시스템</p>
+        </div>
+    </header>
+
+    <!-- Main -->
+    <main class="main-content">
+        <div class="layout-grid">
+
+            <!-- Left: Settings -->
+            <section class="panel settings-panel">
+                <div class="panel-header">
+                    <div class="panel-icon">⚙️</div>
+                    <h2>라벨 설정</h2>
+                </div>
+
+                <form id="barcode-form" autocomplete="off">
+
+                    <!-- 용지 크기 -->
+                    <div class="form-group">
+                        <label><span class="label-icon">📄</span> 용지 크기 (mm)</label>
+                        <div class="size-inputs">
+                            <div class="size-input-group">
+                                <label for="paper-width" class="sub-label">가로</label>
+                                <input type="number" id="paper-width" value="60" min="20" max="200" step="1">
+                            </div>
+                            <span class="size-separator">×</span>
+                            <div class="size-input-group">
+                                <label for="paper-height" class="sub-label">세로</label>
+                                <input type="number" id="paper-height" value="40" min="10" max="200" step="1">
+                            </div>
+                        </div>
+                        <div class="preset-chips">
+                            <button type="button" class="chip" data-w="50" data-h="30">50×30</button>
+                            <button type="button" class="chip active" data-w="60" data-h="40">60×40</button>
+                            <button type="button" class="chip" data-w="70" data-h="40">70×40</button>
+                            <button type="button" class="chip" data-w="100" data-h="50">100×50</button>
+                            <button type="button" class="chip" data-w="80" data-h="50">80×50</button>
+                        </div>
+                    </div>
+
+                    <!-- 출력 모드: 바코드 / 텍스트 -->
+                    <div class="form-group">
+                        <label><span class="label-icon">🔄</span> 출력 모드</label>
+                        <div class="mode-toggle">
+                            <button type="button" class="mode-btn active" id="mode-barcode">📊 바코드</button>
+                            <button type="button" class="mode-btn" id="mode-text">📝 텍스트</button>
+                        </div>
+                    </div>
+
+                    <!-- 바코드 타입 (바코드 모드 전용) -->
+                    <div class="form-group" id="barcode-type-group">
+                        <label for="barcode-type"><span class="label-icon">📊</span> 바코드 타입</label>
+                        <select id="barcode-type">
+                            <option value="code128" selected>Code 128 (범용)</option>
+                            <option value="ean13">EAN-13 (국제상품)</option>
+                            <option value="ean8">EAN-8</option>
+                            <option value="upca">UPC-A</option>
+                            <option value="code39">Code 39</option>
+                            <option value="itf14">ITF-14 (박스)</option>
+                        </select>
+                    </div>
+
+                    <!-- 입력 방식 -->
+                    <div class="form-group">
+                        <label><span class="label-icon">✏️</span> 입력 방식</label>
+                        <div class="mode-toggle">
+                            <button type="button" class="mode-btn active" id="input-single">단일 입력</button>
+                            <button type="button" class="mode-btn" id="input-multi">다중 입력 (추가)</button>
+                        </div>
+                    </div>
+
+                    <!-- 단일 입력 필드 -->
+                    <div id="single-fields">
+                        <div class="form-group">
+                            <label for="input-data" id="input-data-label">
+                                <span class="label-icon">🔢</span> 바코드 데이터
+                            </label>
+                            <input type="text" id="input-data" placeholder="예: 130296">
+                            <span class="input-hint" id="data-hint">바코드에 인코딩할 데이터</span>
+                        </div>
+                        <div class="form-group">
+                            <label for="input-desc"><span class="label-icon">🏷️</span> 설명 텍스트 (바코드 아래)</label>
+                            <input type="text" id="input-desc" placeholder="예: D1 | ACI(US)">
+                        </div>
+                        <div class="form-group">
+                            <label><span class="label-icon">📦</span> 출력 수량</label>
+                            <div class="quantity-control">
+                                <button type="button" class="qty-btn" id="qty-minus">−</button>
+                                <input type="number" id="quantity" value="1" min="1" max="500">
+                                <button type="button" class="qty-btn" id="qty-plus">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 다중 입력(추가) 필드 -->
+                    <div id="multi-fields" style="display:none;">
+                        <div class="form-group">
+                            <label for="multi-data" id="multi-data-label">
+                                <span class="label-icon">🔢</span> 바코드 데이터
+                            </label>
+                            <input type="text" id="multi-data" placeholder="예: 130296">
+                        </div>
+                        <div class="form-group">
+                            <label for="multi-desc"><span class="label-icon">🏷️</span> 설명 텍스트</label>
+                            <input type="text" id="multi-desc" placeholder="예: D1 | ACI(US)">
+                        </div>
+                        <div class="form-group">
+                            <label><span class="label-icon">📦</span> 수량</label>
+                            <div class="quantity-control">
+                                <button type="button" class="qty-btn" id="multi-qty-minus">−</button>
+                                <input type="number" id="multi-qty" value="1" min="1" max="100">
+                                <button type="button" class="qty-btn" id="multi-qty-plus">+</button>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-add" id="btn-add">
+                            <span>＋</span> 추가
+                        </button>
+                        <!-- Added items list -->
+                        <div class="added-list" id="added-list">
+                            <div class="added-list-empty" id="added-empty">추가된 항목이 없습니다</div>
+                        </div>
+                    </div>
+
+                    <!-- Action Buttons -->
+                    <div class="action-buttons">
+                        <button type="button" class="btn btn-preview" id="btn-preview">👁️ 미리보기</button>
+                        <button type="button" class="btn btn-print" id="btn-print">🖨️ PDF 출력</button>
+                    </div>
+                </form>
+            </section>
+
+            <!-- Right: Preview -->
+            <section class="panel preview-panel">
+                <div class="panel-header">
+                    <div class="panel-icon">👁️</div>
+                    <h2>미리보기 (롤 라벨)</h2>
+                    <div class="layout-info" id="layout-info"></div>
+                </div>
+                <div class="preview-container" id="preview-container">
+                    <div class="preview-placeholder" id="preview-placeholder">
+                        <div class="placeholder-icon">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" width="64" height="64">
+                                <rect x="2" y="4" width="2" height="16" rx="0.5" opacity="0.3"/>
+                                <rect x="6" y="4" width="1" height="16" rx="0.5" opacity="0.5"/>
+                                <rect x="9" y="4" width="3" height="16" rx="0.5" opacity="0.4"/>
+                                <rect x="14" y="4" width="1" height="16" rx="0.5" opacity="0.6"/>
+                                <rect x="17" y="4" width="2" height="16" rx="0.5" opacity="0.3"/>
+                                <rect x="21" y="4" width="1" height="16" rx="0.5" opacity="0.5"/>
+                            </svg>
+                        </div>
+                        <p>데이터를 입력하고<br><strong>미리보기</strong> 또는 <strong>추가</strong> 버튼을 클릭하세요</p>
+                    </div>
+                    <div class="roll-preview" id="roll-preview" style="display:none;"></div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Toast -->
+    <div class="toast" id="toast">
+        <span id="toast-icon">✅</span>
+        <span id="toast-message"></span>
+    </div>
+
+    <script src="bwip-js-min.js"></script>
+    <script src="jspdf.umd.min.js"></script>
+    <script src="app.js?v=7"></script>
+</body>
+</html>
