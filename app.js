@@ -301,6 +301,50 @@
     }
 
     // ==========================================
+    // PDF: Unicode text via canvas (jsPDF Helvetica is Latin-1 only)
+    // ==========================================
+    var UNICODE_PDF_FONT = '"Malgun Gothic","맑은 고딕","Apple SD Gothic Neo","Noto Sans KR","Segoe UI",sans-serif';
+
+    function stringNeedsUnicodeRendering(s) {
+        if (!s) return false;
+        for (var i = 0; i < s.length; i++) {
+            if (s.charCodeAt(i) > 255) return true;
+        }
+        return false;
+    }
+
+    function renderUnicodeTextToPng(text, widthMm, heightMm, options) {
+        options = options || {};
+        var fill = options.color || '#111111';
+        var scale = 4;
+        var mmToPx = 96 / 25.4;
+        var wPx = Math.max(32, Math.ceil(widthMm * mmToPx * scale));
+        var hPx = Math.max(16, Math.ceil(heightMm * mmToPx * scale));
+        var canvas = document.createElement('canvas');
+        canvas.width = wPx;
+        canvas.height = hPx;
+        var ctx = canvas.getContext('2d');
+        ctx.fillStyle = fill;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        var maxFs = Math.min(wPx, hPx) * 0.42;
+        var minFs = 6 * scale;
+        var chosen = minFs;
+        var fs;
+        for (fs = Math.floor(maxFs); fs >= minFs; fs--) {
+            ctx.font = 'bold ' + fs + 'px ' + UNICODE_PDF_FONT;
+            var m = ctx.measureText(text);
+            if (m.width <= wPx * 0.94 && fs * 1.2 <= hPx * 0.92) {
+                chosen = fs;
+                break;
+            }
+        }
+        ctx.font = 'bold ' + chosen + 'px ' + UNICODE_PDF_FONT;
+        ctx.fillText(text, wPx / 2, hPx / 2);
+        return canvas.toDataURL('image/png');
+    }
+
+    // ==========================================
     // Preview Rendering
     // ==========================================
     function renderPreview() {
@@ -513,28 +557,32 @@
 
                 // Description (below barcode number)
                 if (label.desc) {
-                    pdf.setFont('helvetica', 'bold');
-                    pdf.setFontSize(descFontSize);
-                    pdf.setTextColor(51, 51, 51);
-                    var descWidth = pdf.getTextWidth(label.desc);
                     var descY = numY + descFontSize * 0.38;
-                    pdf.text(label.desc, (paperW - descWidth) / 2, descY);
+                    if (stringNeedsUnicodeRendering(label.desc)) {
+                        var descBoxW = paperW * 0.92;
+                        var descBoxH = descFontSize * 0.55;
+                        var descPng = renderUnicodeTextToPng(label.desc, descBoxW, descBoxH, { color: '#333333' });
+                        var descX = (paperW - descBoxW) / 2;
+                        var descTop = descY - descBoxH * 0.78;
+                        pdf.addImage(descPng, 'PNG', descX, descTop, descBoxW, descBoxH);
+                    } else {
+                        pdf.setFont('helvetica', 'bold');
+                        pdf.setFontSize(descFontSize);
+                        pdf.setTextColor(51, 51, 51);
+                        var descWidth = pdf.getTextWidth(label.desc);
+                        pdf.text(label.desc, (paperW - descWidth) / 2, descY);
+                    }
                 }
 
             } else {
-                // --- Text mode ---
+                // --- Text mode: rasterize for CJK (standard PDF fonts are not Unicode) ---
                 var text = label.data;
-                // Auto font size: fill the label
-                var fontSize = Math.min(paperW / (text.length * 0.6 + 0.5), paperH * 0.5, 40);
-                fontSize = Math.max(fontSize, 6);
-
-                pdf.setFont('helvetica', 'bold');
-                pdf.setFontSize(fontSize);
-                pdf.setTextColor(17, 17, 17);
-                var tw = pdf.getTextWidth(text);
-                var tx = (paperW - tw) / 2;
-                var ty = paperH / 2 + fontSize * 0.12;
-                pdf.text(text, tx, ty);
+                var padX = paperW * 0.04;
+                var padY = paperH * 0.04;
+                var boxW = paperW - 2 * padX;
+                var boxH = paperH - 2 * padY;
+                var textPng = renderUnicodeTextToPng(text, boxW, boxH);
+                pdf.addImage(textPng, 'PNG', padX, padY, boxW, boxH);
             }
         });
 
